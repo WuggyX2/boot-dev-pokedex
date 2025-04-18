@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+type config struct {
+	next     string
+	previous string
+}
+
 func cleanInput(input string) []string {
 	trimmed := strings.TrimSpace(input)
 	nonEmpty := []string{}
@@ -23,8 +28,8 @@ func cleanInput(input string) []string {
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-
-	cmds := registerCmds()
+	cfg := config{}
+	cmds := registerCmds(&cfg)
 
 	for {
 		fmt.Print("Pokdedex > ")
