@@ -2,7 +2,10 @@ package pokedex
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
+
+	"github.com/WuggyX2/boot-dev-pokedex/internal/pokecache"
 )
 
 type LocationAreaResult struct {
@@ -14,19 +17,30 @@ type LocationAreaResult struct {
 	} `json:"results"`
 }
 
-func RetrieveLocationItems(areaUrl string) (LocationAreaResult, error) {
+func RetrieveLocationItems(areaUrl string, cache *pokecache.Cache) (LocationAreaResult, error) {
 	result := LocationAreaResult{}
-	res, err := http.Get(areaUrl)
 
-	if err != nil {
-		return result, err
-	}
+	var byteValues []byte
 
-	defer res.Body.Close()
+	byteValues, exits := cache.Get(areaUrl)
 
-	decoder := json.NewDecoder(res.Body)
+	if !exits {
+		res, err := http.Get(areaUrl)
+		if err != nil {
+			return result, err
+		}
 
-	if err := decoder.Decode(&result); err != nil {
+		defer res.Body.Close()
+
+		byteValues, err = io.ReadAll(res.Body)
+
+		if err != nil {
+			return result, err
+		}
+
+		cache.Add(areaUrl, byteValues)
+	} 
+	if err := json.Unmarshal(byteValues, &result); err != nil {
 		return result, err
 	}
 

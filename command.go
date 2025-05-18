@@ -3,12 +3,15 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/WuggyX2/boot-dev-pokedex/internal/pokecache"
 	"github.com/WuggyX2/boot-dev-pokedex/pokedex"
 )
 
 type handler struct {
-	cfg *config
+	cfg   *config
+	cache *pokecache.Cache
 }
 
 type cliCommand struct {
@@ -18,15 +21,31 @@ type cliCommand struct {
 }
 
 func registerCmds(cfg *config) map[string]cliCommand {
-	handler := &handler{cfg: cfg}
+	interval := 5 * time.Second
+
+	c := pokecache.NewCache(interval)
+
+	handler := &handler{cfg: cfg, cache: &c}
 
 	cmds := map[string]cliCommand{
 		"exit": {name: "exit", description: "Exit the pokedex", callback: handler.commandExit},
-		"map":  {name: "map", description: "Displays 20 location area names. Each subsequent show the next 20 location ares", callback: handler.commandMap},
-		"mapb": {name: "mapb", description: "Displays the previous 20 location area names. Each subsequent show the next previous 20 location ares", callback: handler.commandMapb},
+		"map": {
+			name:        "map",
+			description: "Displays 20 location area names. Each subsequent show the next 20 location ares",
+			callback:    handler.commandMap,
+		},
+		"mapb": {
+			name:        "mapb",
+			description: "Displays the previous 20 location area names. Each subsequent show the next previous 20 location ares",
+			callback:    handler.commandMapb,
+		},
 	}
 
-	cmds["help"] = cliCommand{name: "help", description: "Displayes the help message", callback: func() error { return handler.commandHelp(cmds) }}
+	cmds["help"] = cliCommand{
+		name:        "help",
+		description: "Displayes the help message",
+		callback:    func() error { return handler.commandHelp(cmds) },
+	}
 
 	return cmds
 }
@@ -58,7 +77,7 @@ func (h *handler) commandMap() error {
 		areaUrl = "https://pokeapi.co/api/v2/location-area/"
 	}
 
-	result, err := pokedex.RetrieveLocationItems(areaUrl)
+	result, err := pokedex.RetrieveLocationItems(areaUrl, h.cache)
 
 	if err != nil {
 		return err
@@ -76,7 +95,7 @@ func (h *handler) commandMapb() error {
 		return nil
 	}
 
-	result, err := pokedex.RetrieveLocationItems(areaUrl)
+	result, err := pokedex.RetrieveLocationItems(areaUrl, h.cache)
 
 	if err != nil {
 		return err
