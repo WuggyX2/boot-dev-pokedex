@@ -40,7 +40,7 @@ func main() {
 		command, exists := cmds[userCommand]
 
 		if exists {
-			err := command.callback()
+			err := command.callback(input[1:])
 
 			if err != nil {
 				fmt.Println("Command execution failed")

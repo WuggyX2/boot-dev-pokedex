@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -17,8 +18,10 @@ type handler struct {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func() error
+	callback    func([]string) error
 }
+
+const LOCATION_AREA_URL = "https://pokeapi.co/api/v2/location-area/"
 
 func registerCmds(cfg *config) map[string]cliCommand {
 	interval := 5 * time.Second
@@ -39,18 +42,23 @@ func registerCmds(cfg *config) map[string]cliCommand {
 			description: "Displays the previous 20 location area names. Each subsequent show the next previous 20 location ares",
 			callback:    handler.commandMapb,
 		},
+		"explore": {
+			name:        "explore",
+			description: "Explores the given area. Reveals the pokemon the given area. Usage 'explore {area name}'",
+			callback:    handler.commandExplore,
+		},
 	}
 
 	cmds["help"] = cliCommand{
 		name:        "help",
 		description: "Displayes the help message",
-		callback:    func() error { return handler.commandHelp(cmds) },
+		callback:    func(args []string) error { return handler.commandHelp(cmds) },
 	}
 
 	return cmds
 }
 
-func (h *handler) commandExit() error {
+func (h *handler) commandExit(args []string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
@@ -68,13 +76,13 @@ func (h *handler) commandHelp(commands map[string]cliCommand) error {
 	return nil
 }
 
-func (h *handler) commandMap() error {
+func (h *handler) commandMap(args []string) error {
 	areaUrl := h.cfg.next
 	previousUrl := h.cfg.previous
 
 	// if its the first page
 	if len(areaUrl) == 0 && len(previousUrl) == 0 {
-		areaUrl = "https://pokeapi.co/api/v2/location-area/"
+		areaUrl = LOCATION_AREA_URL
 	}
 
 	result, err := pokedex.RetrieveLocationItems(areaUrl, h.cache)
@@ -87,7 +95,7 @@ func (h *handler) commandMap() error {
 	return nil
 }
 
-func (h *handler) commandMapb() error {
+func (h *handler) commandMapb(args []string) error {
 	areaUrl := h.cfg.previous
 
 	if len(areaUrl) == 0 {
@@ -102,6 +110,25 @@ func (h *handler) commandMapb() error {
 	}
 
 	printLocationAreas(h.cfg, result)
+	return nil
+}
+
+func (h *handler) commandExplore(args []string) error {
+	if len(args) == 0 {
+		return errors.New("Area name was not provided!")
+	}
+
+	areaName := args[0]
+	fmt.Printf("Exploring %s...\n", areaName)
+
+	result, err := pokedex.GetPokemonsInArea(LOCATION_AREA_URL+areaName, h.cache)
+
+	if err != nil {
+		return err
+	}
+
+	printPokemons(result)
+
 	return nil
 }
 
@@ -122,5 +149,12 @@ func printLocationAreas(config *config, data pokedex.LocationAreaResult) {
 	for _, area := range data.Results {
 		fmt.Println(area.Name)
 	}
+}
 
+func printPokemons(data pokedex.PokemonsInAreaResult) {
+	fmt.Println("Found Pokemon:")
+
+	for _, pokemon := range data.PokemonEncounters {
+		fmt.Printf("- %s\n", pokemon.Pokemon.Name)
+	}
 }
