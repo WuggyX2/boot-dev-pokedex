@@ -8,15 +8,6 @@ import (
 	"github.com/WuggyX2/boot-dev-pokedex/internal/pokecache"
 )
 
-type LocationAreaResult struct {
-	Next     *string `json:"next"`
-	Previous *string `json:"previous"`
-	Results  []struct {
-		Name string `json:"name"`
-		Url  string `json:"url"`
-	} `json:"results"`
-}
-
 func RetrieveLocationItems(areaUrl string, cache *pokecache.Cache) (LocationAreaResult, error) {
 	result := LocationAreaResult{}
 
@@ -42,14 +33,6 @@ func RetrieveLocationItems(areaUrl string, cache *pokecache.Cache) (LocationArea
 
 }
 
-type PokemonsInAreaResult struct {
-	PokemonEncounters []struct {
-		Pokemon struct {
-			Name string `json:"name"`
-		} `json:"pokemon"`
-	} `json:"pokemon_encounters"`
-}
-
 func GetPokemonsInArea(areaUrl string, cache *pokecache.Cache) (PokemonsInAreaResult, error) {
 	result := PokemonsInAreaResult{}
 
@@ -60,6 +43,29 @@ func GetPokemonsInArea(areaUrl string, cache *pokecache.Cache) (PokemonsInAreaRe
 		var err error
 
 		byteValues, err = queryAndCache(areaUrl, cache)
+
+		if err != nil {
+			return result, err
+		}
+	}
+
+	if err := json.Unmarshal(byteValues, &result); err != nil {
+		return result, err
+	}
+
+	return result, nil
+}
+
+func GetPokemon(pokemonUrl string, cache *pokecache.Cache) (PokemonResult, error) {
+	result := PokemonResult{}
+
+	var byteValues []byte
+	byteValues, exists := cache.Get(pokemonUrl)
+
+	if !exists {
+		var err error
+
+		byteValues, err = queryAndCache(pokemonUrl, cache)
 
 		if err != nil {
 			return result, err

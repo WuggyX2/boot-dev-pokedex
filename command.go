@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
@@ -11,8 +12,9 @@ import (
 )
 
 type handler struct {
-	cfg   *config
-	cache *pokecache.Cache
+	cfg      *config
+	cache    *pokecache.Cache
+	pokemons map[string]pokedex.PokemonResult
 }
 
 type cliCommand struct {
@@ -28,7 +30,7 @@ func registerCmds(cfg *config) map[string]cliCommand {
 
 	c := pokecache.NewCache(interval)
 
-	handler := &handler{cfg: cfg, cache: &c}
+	handler := &handler{cfg: cfg, cache: &c, pokemons: make(map[string]pokedex.PokemonResult)}
 
 	cmds := map[string]cliCommand{
 		"exit": {name: "exit", description: "Exit the pokedex", callback: handler.commandExit},
@@ -46,6 +48,11 @@ func registerCmds(cfg *config) map[string]cliCommand {
 			name:        "explore",
 			description: "Explores the given area. Reveals the pokemon the given area. Usage 'explore {area name}'",
 			callback:    handler.commandExplore,
+		},
+		"catch": {
+			name:        "catch",
+			description: "Used this command to try to catch a pokemon. Usage 'catch {pokemon name}'",
+			callback:    handler.commandCatch,
 		},
 	}
 
@@ -128,6 +135,33 @@ func (h *handler) commandExplore(args []string) error {
 	}
 
 	printPokemons(result)
+
+	return nil
+}
+
+func (h *handler) commandCatch(args []string) error {
+	if len(args) == 0 {
+		return errors.New("Pokemon name not provied")
+	}
+
+	pokemonName := args[0]
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokemonName)
+
+	pokemon, err := pokedex.GetPokemon("https://pokeapi.co/api/v2/pokemon/"+pokemonName, h.cache)
+
+	if err != nil {
+		return err
+	}
+
+	catchRate := rand.Intn(256)
+
+	if pokemon.BaseExperience > catchRate {
+		fmt.Printf("%s escaped!\n", pokemonName)
+		return nil
+	}
+
+	fmt.Printf("%s was caught!\n", pokemonName)
+	h.pokemons[pokemon.Name] = pokemon
 
 	return nil
 }
