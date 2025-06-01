@@ -59,6 +59,11 @@ func registerCmds(cfg *config) map[string]cliCommand {
 			description: "Use this command to inspect the pokemons you have catched",
 			callback:    handler.commandInspect,
 		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "Use this command to print all the pokemons in your pokedex",
+			callback:    handler.commandPokedex,
+		},
 	}
 
 	cmds["help"] = cliCommand{
@@ -199,6 +204,20 @@ func (h *handler) commandInspect(args []string) error {
 
 	for _, pokemonType := range pokemon.Types {
 		fmt.Printf("  - %s\n", pokemonType.Type.Name)
+	}
+
+	return nil
+}
+
+func (h *handler) commandPokedex(args []string) error {
+	if len(h.pokemons) == 0 {
+		fmt.Println("You have not caught any pokemons!")
+		return nil
+	}
+
+	fmt.Println("Your pokedex:")
+	for _, pokemon := range h.pokemons {
+		fmt.Printf(" - %s\n", pokemon.Name)
 	}
 
 	return nil
